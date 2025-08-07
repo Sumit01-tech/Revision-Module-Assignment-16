@@ -1,54 +1,38 @@
-const Movie = require('../models/movie.model');
+import { Movie } from "../models/movie.model.js";
 
-const createMovie = async (req, res) => {
+export const getMovies = async (req, res) => {
     try {
-        const movie = await Movie.create(req.body);
-        res.status(201).json(movie);
+        const limit = parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+
+        const movies = await Movie.find()
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({ success: true, data: movies });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
 
-const getAllMovies = async (req, res) => {
-    try {
-        const filter = {};
-        if (req.query.releaseYear) {
-            filter.releaseYear = req.query.releaseYear;
-        }
-        const movies = await Movie.find(filter);
-        res.json(movies);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
-const getMovieById = async (req, res) => {
+export const getMovieInfo = async (req, res) => {
     try {
         const movie = await Movie.findById(req.params.id);
-        if (!movie) return res.status(404).json({ message: 'Movie not found' });
-        res.json(movie);
+        if (!movie) return res.status(404).json({ success: false, message: "Movie not found" });
+
+        movie.logMovieInfo();
+        res.json({ success: true, message: "Movie info logged to console" });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
 
-const updateMovie = async (req, res) => {
+export const createMovie = async (req, res) => {
     try {
-        const movie = await Movie.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
-        if (!movie) return res.status(404).json({ message: 'Movie not found' });
-        res.json(movie);
+        const movie = new Movie(req.body);
+        await movie.save();
+        res.status(201).json({ success: true, data: movie });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        res.status(400).json({ success: false, error: err.message });
     }
-};
-
-module.exports = {
-    createMovie,
-    getAllMovies,
-    getMovieById,
-    updateMovie
 };
